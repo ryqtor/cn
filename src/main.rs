@@ -1,5 +1,12 @@
 use tokio::net::TcpListener;
 use std::error::Error;
+use std::net::SocketAddr;
+
+#[derive(Debug, Clone)]
+pub struct Backend {
+    pub address: SocketAddr,
+    pub is_healthy: bool,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
