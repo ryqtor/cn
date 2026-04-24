@@ -29,5 +29,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
     loop {
         let (mut _socket, _addr) = listener.accept().await?;
         println!("Accepted connection from {}", _addr);
+
+        let target_addr = {
+            let backends_guard = backends.lock().unwrap();
+            backends_guard.iter()
+                .find(|b| b.is_healthy)
+                .map(|b| b.address)
+        };
+
+        match target_addr {
+            Some(addr) => {
+                println!("Routing to {}", addr);
+            }
+            None => {
+                eprintln!("No healthy backends available.");
+            }
+        }
     }
 }
