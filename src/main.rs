@@ -35,9 +35,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         let target_addr = {
             let backends_guard = backends.lock().unwrap();
-            backends_guard.iter()
-                .find(|b| b.is_healthy)
-                .map(|b| b.address)
+            let healthy_backends: Vec<_> = backends_guard.iter().filter(|b| b.is_healthy).collect();
+            if healthy_backends.is_empty() {
+                None
+            } else {
+                let idx = rr_counter.fetch_add(1, Ordering::SeqCst);
+                Some(healthy_backends[idx % healthy_backends.len()].address)
+            }
         };
 
         match target_addr {
