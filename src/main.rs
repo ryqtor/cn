@@ -3,6 +3,7 @@ use std::error::Error;
 use std::net::SocketAddr;
 
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Debug, Clone)]
 pub struct Backend {
@@ -22,6 +23,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             is_healthy: true,
         },
     ]));
+
+    let rr_counter = Arc::new(AtomicUsize::new(0));
 
     let listener = TcpListener::bind("127.0.0.1:8080").await?;
     println!("LBRS listening on 127.0.0.1:8080");
