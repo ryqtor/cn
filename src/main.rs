@@ -30,7 +30,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
     tokio::spawn(async move {
         loop {
             tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-            // ping backends here
+            
+            let addresses = {
+                let guard = backends_health.lock().unwrap();
+                guard.iter().map(|b| b.address).collect::<Vec<_>>()
+            };
+
+            for addr in addresses {
+                let ping_result = tokio::time::timeout(
+                    std::time::Duration::from_secs(2),
+                    tokio::net::TcpStream::connect(addr)
+                ).await;
+                // status updated in next commit
+            }
         }
     });
 
