@@ -26,6 +26,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let rr_counter = Arc::new(AtomicUsize::new(0));
 
+    let backends_health = backends.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            // ping backends here
+        }
+    });
+
     let listener = TcpListener::bind("127.0.0.1:8080").await?;
     println!("LBRS listening on 127.0.0.1:8080");
 
