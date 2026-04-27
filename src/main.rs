@@ -37,11 +37,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
             };
 
             for addr in addresses {
-                let ping_result = tokio::time::timeout(
+                let is_healthy = match tokio::time::timeout(
                     std::time::Duration::from_secs(2),
                     tokio::net::TcpStream::connect(addr)
-                ).await;
-                // status updated in next commit
+                ).await {
+                    Ok(Ok(_)) => true,
+                    _ => false,
+                };
+                
+                let mut guard = backends_health.lock().unwrap();
+                if let Some(backend) = guard.iter_mut().find(|b| b.address == addr) {
+                    backend.is_healthy = is_healthy;
+                }
             }
         }
     });
