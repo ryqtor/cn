@@ -1,4 +1,6 @@
 use tokio::net::UdpSocket;
+use std::time::Duration;
+use tokio::time::timeout;
 
 #[derive(Debug)]
 struct RPacket {
@@ -8,6 +10,7 @@ struct RPacket {
 
 #[tokio::main]
 async fn main() {
-    let _socket = UdpSocket::bind("0.0.0.0:0").await.unwrap();
-    println!("R-UDP with sequence IDs");
+    let socket = UdpSocket::bind("0.0.0.0:8080").await.unwrap();
+    println!("Waiting for ACKs...");
+    // 200ms tak wait karo, agar ack nahi aaya to wapas bhejo yaar
 }
