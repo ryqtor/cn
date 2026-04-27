@@ -4,6 +4,17 @@ use std::net::SocketAddr;
 
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[arg(short, long, default_value = "127.0.0.1:8080")]
+    port: String,
+
+    #[arg(short, long, required = true, num_args = 1..)]
+    backends: Vec<String>,
+}
 
 #[derive(Debug, Clone)]
 pub struct Backend {
@@ -13,16 +24,16 @@ pub struct Backend {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let backends = Arc::new(Mutex::new(vec![
-        Backend {
-            address: "127.0.0.1:8081".parse().unwrap(),
+    let args = Args::parse();
+
+    let parsed_backends: Vec<Backend> = args.backends.into_iter()
+        .map(|b| Backend {
+            address: b.parse().expect("Invalid backend address"),
             is_healthy: true,
-        },
-        Backend {
-            address: "127.0.0.1:8082".parse().unwrap(),
-            is_healthy: true,
-        },
-    ]));
+        })
+        .collect();
+
+    let backends = Arc::new(Mutex::new(parsed_backends));
 
     let rr_counter = Arc::new(AtomicUsize::new(0));
 
@@ -53,8 +64,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
-    let listener = TcpListener::bind("127.0.0.1:8080").await?;
-    println!("LBRS listening on 127.0.0.1:8080");
+    let listener = TcpListener::bind(&args.port).await?;
+    println!("LBRS listening on {}", args.port);
 
     loop {
         let (mut _socket, _addr) = listener.accept().await?;
