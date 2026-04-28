@@ -24,6 +24,8 @@ pub struct Backend {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    tracing_subscriber::fmt::init();
+    
     let args = Args::parse();
 
     let parsed_backends: Vec<Backend> = args.backends.into_iter()
@@ -65,11 +67,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
 
     let listener = TcpListener::bind(&args.port).await?;
-    println!("LBRS listening on {}", args.port);
+    tracing::info!("LBRS listening on {}", args.port);
 
     loop {
         let (mut _socket, _addr) = listener.accept().await?;
-        println!("Accepted connection from {}", _addr);
+        tracing::info!("Accepted connection from {}", _addr);
 
         let target_addr = {
             let backends_guard = backends.lock().unwrap();
@@ -84,23 +86,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         match target_addr {
             Some(addr) => {
-                println!("Routing to {}", addr);
+                tracing::info!("Routing to {}", addr);
                 tokio::spawn(async move {
                     match tokio::net::TcpStream::connect(addr).await {
                         Ok(mut backend_socket) => {
                             match tokio::io::copy_bidirectional(&mut _socket, &mut backend_socket).await {
                                 Ok((bytes_tx, bytes_rx)) => {
-                                    println!("Proxy finished. Tx: {}, Rx: {}", bytes_tx, bytes_rx);
+                                    tracing::info!("Proxy finished. Tx: {}, Rx: {}", bytes_tx, bytes_rx);
                                 }
-                                Err(e) => eprintln!("Error proxying data: {}", e),
+                                Err(e) => tracing::error!("Error proxying data: {}", e),
                             }
                         }
-                        Err(e) => eprintln!("Failed to connect to backend: {}", e),
+                        Err(e) => tracing::error!("Failed to connect to backend: {}", e),
                     }
                 });
             }
             None => {
-                eprintln!("No healthy backends available.");
+                tracing::error!("No healthy backends available.");
             }
         }
     }
