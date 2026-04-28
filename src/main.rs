@@ -88,8 +88,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             Some(addr) => {
                 tracing::info!("Routing to {}", addr);
                 tokio::spawn(async move {
-                    match tokio::net::TcpStream::connect(addr).await {
-                        Ok(mut backend_socket) => {
+                    let connect_future = tokio::net::TcpStream::connect(addr);
+                    match tokio::time::timeout(std::time::Duration::from_secs(5), connect_future).await {
+                        Ok(Ok(mut backend_socket)) => {
                             match tokio::io::copy_bidirectional(&mut _socket, &mut backend_socket).await {
                                 Ok((bytes_tx, bytes_rx)) => {
                                     tracing::info!("Proxy finished. Tx: {}, Rx: {}", bytes_tx, bytes_rx);
@@ -97,7 +98,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                 Err(e) => tracing::error!("Error proxying data: {}", e),
                             }
                         }
-                        Err(e) => tracing::error!("Failed to connect to backend: {}", e),
+                        Ok(Err(e)) => tracing::error!("Failed to connect to backend: {}", e),
+                        Err(_) => tracing::error!("Connection to backend {} timed out", addr),
                     }
                 });
             }
