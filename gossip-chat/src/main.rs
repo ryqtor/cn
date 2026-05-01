@@ -1,13 +1,26 @@
 use tokio::sync::mpsc;
 use std::collections::HashSet;
-// use rand::seq::SliceRandom; // commented for now to avoid compiling issues if rand isn't perfect
 
+// Final G-CHAT
 #[tokio::main]
 async fn main() {
-    let (tx, mut rx) = mpsc::channel::<String>(100);
+    let (tx, mut rx) = mpsc::channel::<(String, String)>(100);
     let mut seen_msgs = HashSet::new();
     let peers = vec!["NodeA", "NodeB", "NodeC", "NodeD", "NodeE"];
     
-    // random peers select karo
-    println!("Handling nodes: {:?}", peers);
+    tokio::spawn(async move {
+        let _ = tx.send(("msg_001".to_string(), "hello".to_string())).await;
+    });
+
+    while let Some((msg_id, content)) = rx.recv().await {
+        // message id set me check karo ki pehle dekha hai ya nahi, warna infinite loop me fass jayenge
+        if seen_msgs.contains(&msg_id) {
+            continue;
+        }
+        seen_msgs.insert(msg_id.clone());
+        println!("Received: {}", content);
+        
+        // 3 random peers ko forward karo
+        println!("Forwarding to 3 random peers...");
+    }
 }
